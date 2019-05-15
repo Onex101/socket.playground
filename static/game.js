@@ -56,9 +56,7 @@ canvas.height = 600;
 var ctx = canvas.getContext('2d');
 socket.on('state', function(players) {
     ctx.clearRect(0, 0, 800, 600);
-    console.log(players);
   for (var player in players) {
-    console.table(players[player])
     var tmp = players[player];
     ctx.beginPath();
     ctx.save();
