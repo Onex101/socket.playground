@@ -6,12 +6,25 @@ var socketIO = require('socket.io');
 var app = express();
 var server = http.Server(app);
 var io = socketIO(server);
+var querystring = require('querystring');
+var username = "";
 
 app.set('port', 5000);
 app.use('/static', express.static(__dirname + '/static'));
 // Routing
 app.get('/', function(request, response) {
-  response.sendFile(path.join(__dirname, 'index.html'));
+  response.sendFile(path.join(__dirname, 'login.html'));
+});
+app.post('/', function(request, response){
+	var body = "";
+	request.on("data", (chunk) => {
+		body += chunk;
+	});
+	request.on("end", () => {
+		const data = querystring.parse(body);
+		username = data.username;
+	});
+	response.sendFile(path.join(__dirname, 'index.html'));
 });
 // Starts the server.
 server.listen(5000, function() {
@@ -23,55 +36,53 @@ var PLAYER_LIST = {};
 var WIDTH = 800;
 var HEIGHT = 600;
 
-Player = function(socketID){	
+Player = function(username){	
 	var self = Actor('player','myId',50,40,30,5,20,20,'green',10,1);
-  var id = socketID;
+	self.movement = {};
+	self.username = username;
+	self.tag = false;
+	self.previousTag;
 
-			self.updatePosition = function(){
-					if(self.pressingRight)
-						self.x += 10;
-					if(self.pressingLeft)
-						self.x -= 10;
-					if(self.pressingDown)
-						self.y += 10;
-					if(self.pressingUp)
-						self.y -= 10;
-					
-					if(self.x < self.width/2)
-						self.x = self.width/2;
-					if(self.x > WIDTH - self.width/2)
-						self.x = WIDTH - self.width/2;
-					if(self.y < self.height/2)
-						self.y = self.height/2;
-					if (self.y > HEIGHT - self.height/2)
-						self.y = HEIGHT - self.height/2;
+	self.updatePosition = function(){
+
+			if(self.movement.right)
+				self.x += 5;
+			if(self.movement.left)
+				self.x -= 5;
+			if(self.movement.down)
+				self.y += 5;
+			if(self.movement.up)
+				self.y -= 5;
 			
-			}
-			
-			self.pressingDown = false;
-			self.pressingUp = false;
-			self.pressingLeft = false;
-			self.pressingRight = false;
-			return self;
+			if(self.x < self.width/2)
+				self.x = self.width/2;
+			if(self.x > WIDTH - self.width/2)
+				self.x = WIDTH - self.width/2;
+			if(self.y < self.height/2)
+				self.y = self.height/2;
+			if (self.y > HEIGHT - self.height/2)
+				self.y = HEIGHT - self.height/2;
+	}		
+	return self;
 }
 
 Actor = function(type,id,x,y,spdX,spdY,width,height,color,hp,atkSpd){
 		var self = Entity(type,id,x,y,spdX,spdY,width,height,color);
 
-			self.hp = hp;
-			self.atkSpd = atkSpd;
-			self.attackCounter = 0;
-			self.aimAngle = 0;
+		self.hp = hp;
+		self.atkSpd = atkSpd;
+		self.attackCounter = 0;
+		self.aimAngle = 0;
 			
-			var super_update = self.update;
-			self.update  = function(){
-				super_update();
-				self.attackCounter += self.atkSpd;
-			}
+		var super_update = self.update;
+		self.update  = function(){
+			super_update();
+			self.attackCounter += self.atkSpd;
+		}
 			
-	self.performAttack = function(){
-		if(self.attackCounter > 25){
-			self.attackCounter = 0;
+		self.performAttack = function(){
+			if(self.attackCounter > 25){
+				self.attackCounter = 0;
 			// generateBullet(self);
 		}
 
@@ -79,12 +90,11 @@ Actor = function(type,id,x,y,spdX,spdY,width,height,color,hp,atkSpd){
 
 	self.performSpecialAttack = function(){
 			if(self.attackCounter > 50){
-			self.attackCounter = 0;
+				self.attackCounter = 0;
 					// generateBullet(self, self.aimAngle - 5);
 					// generateBullet(self, self.aimAngle);
 					// generateBullet(self, self.aimAngle + 5);
 		}
-		
 	}
 	return self		
 }
@@ -110,8 +120,10 @@ Entity = function(type,id,x,y,spdX,spdY,width,height,color){
 				var vy = self.y - entity2.y;
 				return Math.sqrt(vx*vx+vy*vy);
 		}
-		self.testCollision = function(entity2){ //return if colliding (true/false)
-				var rect1 = {
+
+		self.testCollision = function(player2){ //return if colliding (true/false)
+			entity2 = PLAYER_LIST[player2]
+			var rect1 = {
 						x:self.x-self.width/2,
 						y:self.y-self.height/2,
 						width:self.width,
@@ -123,7 +135,38 @@ Entity = function(type,id,x,y,spdX,spdY,width,height,color){
 						width:entity2.width,
 						height:entity2.height,
 				}
-				return testCollisionRectRect(rect1,rect2);
+				if (testCollisionRectRect(rect1, rect2)){
+					if (self.movement.right){
+						self.x -= 5;
+						entity2.x += 5;
+					}
+					if (self.movement.left){
+						self.x -= -5;
+						entity2.x += -5;
+					}
+					if (self.movement.up){
+						self.y -= -5;
+						entity2.y += -5;
+					}
+					if (self.movement.down){
+						self.y -= 5;
+						entity2.y += 5;
+					}
+					if (self.previousTag != player2 && entity2.tag){
+						self.tag = true;
+						self.color = 'green';
+						entity2.tag = false;
+						entity2.color = 'red';
+						previousTag = player2;
+					}
+					else{
+						self.tag = false;
+						self.color = 'red'
+						// entity2.tag = true;
+						// entity2.color = 'red'
+						previousTag = '';
+					}
+				}
 		}	
 		self.updatePosition = function(){
 			self.x += self.spdX;
@@ -140,41 +183,36 @@ Entity = function(type,id,x,y,spdX,spdY,width,height,color){
 }	
 
 testCollisionRectRect = function(rect1,rect2){
-	return rect1.x <= rect2.x+rect2.width
-		&& rect2.x <= rect1.x+rect1.width
-		&& rect1.y <= rect2.y + rect2.height
-		&& rect2.y <= rect1.y + rect1.height
+	return (rect1.x < rect2.x + rect2.width
+			&&  rect2.x < rect1.x + rect1.width
+			&&  rect1.y < rect2.y + rect2.height
+			&&  rect2.y < rect1.y + rect1.height)
 }
 
 var io = require('socket.io')(server,{});
 io.sockets.on('connection',function(socket){
 
-    console.log("Player " + socket.id + " connected");
-
-    SOCKET_LIST[socket.id] = socket;
-    var player = Player(socket.id);
+    console.log("Player " + socket.id + " connected with username - " + username);
+    var player = Player(username);
     PLAYER_LIST[socket.id] = player;
 	
     socket.on('disconnect',function(){
       console.log("Player " + socket.id + " disconnected");
-      delete SOCKET_LIST[socket.id];
       delete PLAYER_LIST[socket.id];
+      delete SOCKET_LIST[socket.id];
     });
 	
     socket.on('movement', function(movement){
-        player = PLAYER_LIST[socket.id]
-        //console.log("Player " + socket.id + " Pressed ");
-        //console.table(movement)
+			player = PLAYER_LIST[socket.id];
+			player.movement = movement;
+			player.update();
+			for (var player2 in PLAYER_LIST){
+				if (socket.id != player2){
+					player.testCollision(player2);
+				}
+			}
+		});
 
-          player.pressingLeft = movement.left;
-
-          player.pressingRight = movement.right;
-
-          player.pressingUp = movement.up; //a
-
-          player.pressingDown = movement.down;
-        player.update();
-    });
     setInterval(function() {
       //console.log(PLAYER_LIST);
       socket.emit('state', PLAYER_LIST);

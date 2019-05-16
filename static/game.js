@@ -50,19 +50,32 @@ setInterval(function() {
     socket.emit('movement', movement);
 }, 1000 / 60);
 
+function placeDiv(tmp) {
+  var d = document.createElement('div');
+  d.className = "playerDIV";
+  d.style.position = "absolute";
+  d.style.left = tmp.x+'px';
+  d.style.top = tmp.y+'px';
+  d.style.background.opacity = 0;
+  // d.style.border = "solid #000000"
+  d.innerText = ' ' + tmp.username.charAt(0);
+  d.style.color = "#ffffff"
+  document.body.appendChild(d);
+}
+
 var canvas = document.getElementById('canvas');
 canvas.width = 800;
 canvas.height = 600;
 var ctx = canvas.getContext('2d');
 socket.on('state', function(players) {
-    ctx.clearRect(0, 0, 800, 600);
-  for (var player in players) {
-    var tmp = players[player];
+  [...document.getElementsByClassName('playerDIV')].map(n => n && n.remove());
+  ctx.clearRect(0, 0, 800, 600);
+  for (var player1 in players) {
+    var tmp = players[player1];
+    placeDiv(tmp);
     ctx.beginPath();
-    ctx.save();
     ctx.fillStyle = tmp.color;
     ctx.fillRect(tmp.x-tmp.width/2,tmp.y-tmp.height/2,tmp.width,tmp.height);
-    ctx.restore();
     ctx.closePath();
   }
 });
