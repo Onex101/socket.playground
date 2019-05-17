@@ -36,12 +36,22 @@ var PLAYER_LIST = {};
 var WIDTH = 800;
 var HEIGHT = 600;
 
-Player = function(username){	
+Object.size = function(obj) {
+	var size = 0, key;
+	for (key in obj) {
+			if (obj.hasOwnProperty(key)) size++;
+	}
+	return size;
+};
+
+Player = function(username, socketID, tag){	
 	var self = Actor('player','myId',50,40,30,5,20,20,'green',10,1);
 	self.movement = {};
 	self.username = username;
-	self.tag = false;
+	self.socketID = socketID;
+	self.tag = tag;
 	self.previousTag;
+	console.log(self);
 
 	self.updatePosition = function(){
 
@@ -62,7 +72,7 @@ Player = function(username){
 				self.y = self.height/2;
 			if (self.y > HEIGHT - self.height/2)
 				self.y = HEIGHT - self.height/2;
-	}		
+	}
 	return self;
 }
 
@@ -152,20 +162,18 @@ Entity = function(type,id,x,y,spdX,spdY,width,height,color){
 						self.y -= 5;
 						entity2.y += 5;
 					}
-					if (self.previousTag != player2 && entity2.tag){
-						self.tag = true;
-						self.color = 'green';
-						entity2.tag = false;
-						entity2.color = 'red';
-						previousTag = player2;
-					}
-					else{
+					if (self.tag && player2 != self.previousTag){ // If I collide into someone
 						self.tag = false;
-						self.color = 'red'
-						// entity2.tag = true;
-						// entity2.color = 'red'
-						previousTag = '';
+						entity2.tag = true;
+						entity2.previousTag = self.socketID;
 					}
+					// else{ // If someone collides into me
+					// 	self.tag = false;
+					// 	self.color = 'red'
+					// 	// entity2.tag = true;
+					// 	// entity2.color = 'red'
+					// 	previousTag = '';
+					// }
 				}
 		}	
 		self.updatePosition = function(){
@@ -193,8 +201,13 @@ var io = require('socket.io')(server,{});
 io.sockets.on('connection',function(socket){
 
     console.log("Player " + socket.id + " connected with username - " + username);
-    var player = Player(username);
-    PLAYER_LIST[socket.id] = player;
+		var player;
+		if (Object.size(PLAYER_LIST) <= 0){
+			player = Player(username, socket.id, true);
+		}
+		else
+			player = Player(username, socket.id, false);
+		PLAYER_LIST[socket.id] = player;
 	
     socket.on('disconnect',function(){
       console.log("Player " + socket.id + " disconnected");

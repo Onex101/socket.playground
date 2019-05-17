@@ -74,7 +74,12 @@ socket.on('state', function(players) {
     var tmp = players[player1];
     placeDiv(tmp);
     ctx.beginPath();
-    ctx.fillStyle = tmp.color;
+    if (tmp.tag){
+      ctx.fillStyle = 'red';
+    }
+    else{
+      ctx.fillStyle = tmp.color;
+    }
     ctx.fillRect(tmp.x-tmp.width/2,tmp.y-tmp.height/2,tmp.width,tmp.height);
     ctx.closePath();
   }
