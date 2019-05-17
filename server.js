@@ -167,13 +167,6 @@ Entity = function(type,id,x,y,spdX,spdY,width,height,color){
 						entity2.tag = true;
 						entity2.previousTag = self.socketID;
 					}
-					// else{ // If someone collides into me
-					// 	self.tag = false;
-					// 	self.color = 'red'
-					// 	// entity2.tag = true;
-					// 	// entity2.color = 'red'
-					// 	previousTag = '';
-					// }
 				}
 		}	
 		self.updatePosition = function(){
