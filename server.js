@@ -28,7 +28,7 @@ app.get("/", function(request, response) {
 // });
 // Starts the server.
 server.listen(process.env.PORT || 5000, function() {
-    console.log("Starting server on port 5000");
+    console.log(`Starting server on port ${process.env.PORT || 5000}`);
 });
 var player_speed = 5;
 var player_size = 20;
@@ -80,7 +80,6 @@ io.sockets.on('connection', function(socket) {
     const testCollision = function(player2) {
         //return if colliding (true/false)
         const entity2 = players[player2]
-        console.log(entity2)
         const rect1 = {
             x: this_player.x - this_player.width / 2,
             y: this_player.y - this_player.height / 2,
@@ -105,7 +104,6 @@ io.sockets.on('connection', function(socket) {
         if (player_exists)
             for (var player2 in players) {
                 if (this_player.id !== players[player2].id) {
-                    console.log('Terstings', players[player2])
                     testCollision(player2);
                 }
             }
