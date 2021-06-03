@@ -2,7 +2,7 @@
 var express = require("express");
 var http = require("http");
 var path = require("path");
-var socketIO = require("socket.io");
+var socketIO = require('socket.io', { rememberTransport: false, transports: ['WebSocket', 'Flash Socket', 'AJAX long-polling'] });
 var app = express();
 var server = http.Server(app);
 var io = socketIO(server);
@@ -11,224 +11,175 @@ var username = "";
 
 app.use("/static", express.static(__dirname + "/static"));
 // Routing
-app.get("/", function (request, response) {
-	response.sendFile(path.join(__dirname, "login.html"));
+app.get("/", function(request, response) {
+    response.sendFile(path.join(__dirname, "login.html"));
 });
-app.post("/", function (request, response) {
-	var body = "";
-	request.on("data", (chunk) => {
-		body += chunk;
-	});
-	request.on("end", () => {
-		const data = querystring.parse(body);
-		username = data.username;
-	});
-	response.sendFile(path.join(__dirname, "index.html"));
+app.post("/", function(request, response) {
+    var body = "";
+    request.on("data", (chunk) => {
+        body += chunk;
+    });
+    request.on("end", () => {
+        const data = querystring.parse(body);
+        username = data.username;
+    });
+    response.sendFile(path.join(__dirname, "index.html"));
 });
 // Starts the server.
-server.listen(process.env.PORT || 5000, function () {
-	console.log("Starting server on port 5000");
+server.listen(process.env.PORT || 5000, function() {
+    console.log("Starting server on port 5000");
 });
+var player_speed = 5;
+var player_size = 20;
+var vel_increment = 0.5;
+var canvas_height = 480;
+var canvas_width = 512;
 
-var SOCKET_LIST = {};
-var PLAYER_LIST = {};
-var WIDTH = 800;
-var HEIGHT = 600;
+//Declare list of players connected
+var players = [];
 
-Object.size = function (obj) {
-	var size = 0,
-		key;
-	for (key in obj) {
-		if (obj.hasOwnProperty(key)) size++;
-	}
-	return size;
-};
+io.sockets.on('connection', function(socket) {
+    var socket_id = socket.id;
+    var player_index, player_exists = false;
+    var this_player;
 
-Player = function (username, socketID, tag) {
-	var self = Actor("player", "myId", 50, 40, 30, 5, 20, 20, "green", 10, 1);
-	self.movement = {};
-	self.username = username;
-	self.socketID = socketID;
-	self.tag = tag;
-	self.previousTag;
-	// console.log(self);
+    var check_bounds = function() {
+        //Keep player in the canvas
+        if (this_player.y < 0)
+            this_player.y = 0;
+        if (this_player.y + player_size > canvas_height)
+            this_player.y = canvas_height - player_size;
 
-	self.updatePosition = function () {
-		if (self.movement.right) self.x += 5;
-		if (self.movement.left) self.x -= 5;
-		if (self.movement.down) self.y += 5;
-		if (self.movement.up) self.y -= 5;
+        if (this_player.x < 0)
+            this_player.x = 0;
+        if (this_player.x + player_size > canvas_width)
+            this_player.x = canvas_width - player_size;
 
-		if (self.x < self.width / 2) self.x = self.width / 2;
-		if (self.x > WIDTH - self.width / 2) self.x = WIDTH - self.width / 2;
-		if (self.y < self.height / 2) self.y = self.height / 2;
-		if (self.y > HEIGHT - self.height / 2)
-			self.y = HEIGHT - self.height / 2;
-	};
-	return self;
-};
+        //Keep velocity between -5 and 5
+        if (this_player.vely > player_speed)
+            this_player.vely = player_speed;
+        if (this_player.velx > player_speed)
+            this_player.velx = player_speed;
 
-Actor = function (
-	type,
-	id,
-	x,
-	y,
-	spdX,
-	spdY,
-	width,
-	height,
-	color,
-	hp,
-	atkSpd
-) {
-	var self = Entity(type, id, x, y, spdX, spdY, width, height, color);
+        if (this_player.vely < -player_speed)
+            this_player.vely = -player_speed;
+        if (this_player.velx < -player_speed)
+            this_player.velx = -player_speed;
+    };
 
-	self.hp = hp;
-	self.atkSpd = atkSpd;
-	self.attackCounter = 0;
-	self.aimAngle = 0;
+    var sv_update = function() {
+        io.sockets.emit('sv_update', players);
+        if (player_exists) {
+            if (players.length == 1)
+                this_player.is_it = true;
+            check_bounds();
+        }
+    };
 
-	var super_update = self.update;
-	self.update = function () {
-		super_update();
-		self.attackCounter += self.atkSpd;
-	};
+    //When a client connects, add them to players[]
+    //Then update all clients
+    socket.on('init_client', function(player) {
+        player.id = socket.id;
+        players.push(player);
 
-	self.performAttack = function () {
-		if (self.attackCounter > 25) {
-			self.attackCounter = 0;
-			// generateBullet(self);
-		}
-	};
+        for (var i = 0; i < players.length; i++)
+            if (players[i].id == socket_id)
+                player_index = i;
+        player_exists = true;
+        this_player = players[player_index];
 
-	self.performSpecialAttack = function () {
-		if (self.attackCounter > 50) {
-			self.attackCounter = 0;
-			// generateBullet(self, self.aimAngle - 5);
-			// generateBullet(self, self.aimAngle);
-			// generateBullet(self, self.aimAngle + 5);
-		}
-	};
-	return self;
-};
+        sv_update();
+        socket.emit('load_players', players);
 
-Entity = function (type, id, x, y, spdX, spdY, width, height, color) {
-	var self = {
-		type: type,
-		x: x,
-		spdX: spdX,
-		y: y,
-		spdY: spdY,
-		id: id,
-		width: width,
-		height: height,
-		color: color,
-	};
-	self.update = function () {
-		self.updatePosition();
-	};
+        console.log(players);
+    });
 
-	self.getDistance = function (entity2) {
-		//return distance (number). This function runs after other functions run becasue it isnt calle upon right away
-		var vx = self.x - entity2.x;
-		var vy = self.y - entity2.y;
-		return Math.sqrt(vx * vx + vy * vy);
-	};
+    //====================CHAT==========================//
+    var address = socket.request.connection.remoteAddress;
 
-	self.testCollision = function (player2) {
-		//return if colliding (true/false)
-		entity2 = PLAYER_LIST[player2];
-		var rect1 = {
-			x: self.x - self.width / 2,
-			y: self.y - self.height / 2,
-			width: self.width,
-			height: self.height,
-		};
-		var rect2 = {
-			x: entity2.x - entity2.width / 2,
-			y: entity2.y - entity2.height / 2,
-			width: entity2.width,
-			height: entity2.height,
-		};
-		if (testCollisionRectRect(rect1, rect2)) {
-			if (self.movement.right) {
-				self.x -= 5;
-				entity2.x += 5;
-			}
-			if (self.movement.left) {
-				self.x -= -5;
-				entity2.x += -5;
-			}
-			if (self.movement.up) {
-				self.y -= -5;
-				entity2.y += -5;
-			}
-			if (self.movement.down) {
-				self.y -= 5;
-				entity2.y += 5;
-			}
-			if (self.tag && player2 != self.previousTag) {
-				// If I collide into someone
-				self.tag = false;
-				entity2.tag = true;
-				entity2.previousTag = self.socketID;
-			}
-		}
-	};
-	self.updatePosition = function () {
-		self.x += self.spdX;
-		self.y += self.spdY;
+    socket.on('new user', function(data, callback) {
+        if (player_exists) {
+            this_player.name = data;
+            console.log(address + " has connected as '" + data + "'.");
 
-		if (self.x < 0 || self.x > WIDTH) {
-			self.spdX = -self.spdX;
-		}
-		if (self.y < 0 || self.y > HEIGHT) {
-			self.spdY = -self.spdY;
-		}
-	};
-	return self;
-};
+            callback();
+        }
+    });
 
-testCollisionRectRect = function (rect1, rect2) {
-	return (
-		rect1.x < rect2.x + rect2.width &&
-		rect2.x < rect1.x + rect1.width &&
-		rect1.y < rect2.y + rect2.height &&
-		rect2.y < rect1.y + rect1.height
-	);
-};
+    socket.on('error', function(error) {
+        console.log(error)
+    })
 
-var io = require("socket.io")(server, {});
-io.sockets.on("connection", function (socket) {
-	// console.log(
-	// 	"Player " + socket.id + " connected with username - " + username
-	// );
-	var player;
-	if (Object.size(PLAYER_LIST) <= 0) {
-		player = Player(username, socket.id, true);
-	} else player = Player(username, socket.id, false);
-	PLAYER_LIST[socket.id] = player;
+    socket.on('Connect_failed', function(error) {
+        console.log(error)
+    })
 
-	socket.on("disconnect", function () {
-		// console.log("Player " + socket.id + " disconnected");
-		delete PLAYER_LIST[socket.id];
-		delete SOCKET_LIST[socket.id];
-	});
+    socket.on('send message', function(data) {
+        io.sockets.emit('broadcast', this_player.name, data);
+    });
+    //====================CHAT==========================//
 
-	socket.on("movement", function (movement) {
-		player = PLAYER_LIST[socket.id];
-		player.movement = movement;
-		player.update();
-		for (var player2 in PLAYER_LIST) {
-			if (socket.id != player2) {
-				player.testCollision(player2);
-			}
-		}
-	});
-	// socket.emit("state", PLAYER_LIST);
+    //if player is_it and is within another player, hitting 'j' will make the other player is_it. 
+    socket.on('tag', function() {
+        if (player_exists) {
+            for (var i = 0; i < players.length; i++) {
+                if ((this_player.x + player_size >= players[i].x && this_player.x + player_size <= players[i].x + player_size) ||
+                    (this_player.x <= players[i].x + player_size && this_player.x + player_size >= players[i].x))
+                    if ((this_player.y + player_size >= players[i].y && this_player.y + player_size <= players[i].y + player_size) ||
+                        (this_player.y <= players[i].y + player_size && this_player.y + player_size >= players[i].y)) {
+                        if (this_player.is_it) {
+                            this_player.is_it = false;
+                            players[i].is_it = true;
+                        }
+                    }
+            }
+            sv_update();
+        }
+    });
 
-	setInterval(function () {
-		//console.log(PLAYER_LIST);
-		socket.emit("state", PLAYER_LIST);
-	}, 1000 / 60);
+    //Gather key input from users...
+    socket.on('up', function() {
+        if (player_exists) {
+            this_player.y -= player_speed;
+            sv_update();
+        }
+    });
+
+    //Gather key input from users...
+    socket.on('down', function() {
+        if (player_exists) {
+            this_player.y += player_speed;
+            sv_update();
+        }
+    });
+
+    //Gather key input from users...
+    socket.on('left', function() {
+        if (player_exists) {
+            this_player.x -= player_speed;
+
+            sv_update();
+        }
+    });
+
+    //Gather key input from users...
+    socket.on('right', function() {
+        if (player_exists) {
+            this_player.x += player_speed;
+
+            sv_update();
+        }
+    });
+
+    //When a player disconnects, remove them from players[]
+    //Then update all clients
+    socket.on('disconnect', function() {
+        for (var i = 0; i < players.length; i++) {
+            if (players[i].id == socket.id) {
+                players.splice(i, 1);
+            }
+        }
+
+        sv_update();
+    });
 });

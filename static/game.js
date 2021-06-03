@@ -1,110 +1,88 @@
-var socket = io();
-
-socket.on("message", function (data) {
-	console.log(data);
-});
-
-var movement = {
-	up: false,
-	down: false,
-	left: false,
-	right: false,
-};
-
-window.addEventListener("keydown", function (event) {
-	event.stopPropagation();
-	// event.defaultPrevented()
-	switch (event.key) {
-		case "a": // A
-			movement.left = true;
-			break;
-		case "w": // W
-			movement.up = true;
-			break;
-		case "d": // D
-			movement.right = true;
-			break;
-		case "s": // S
-			movement.down = true;
-			break;
-	}
-});
-window.addEventListener("keyup", function (event) {
-	switch (event.key) {
-		case "a": // A
-			movement.left = false;
-			break;
-		case "w": // W
-			movement.up = false;
-			break;
-		case "d": // D
-			movement.right = false;
-			break;
-		case "s": // S
-			movement.down = false;
-			break;
-	}
-});
-
-socket.emit("new player");
-
-setInterval(function () {
-	socket.emit("movement", movement);
-}, 1000 / 60);
-
-function placeDiv(tmp) {
-	var d = document.createElement("div");
-	var span = document.createElement("span");
-	var userName = document.createTextNode(tmp.username);
-	span.style.color = "black";
-	span.style.position = "relative";
-	span.style.top = "-12px";
-
-	d.className = "playerDIV";
-	// d.style.position = "absolute";
-	// d.style.left = tmp.x + "px";
-	// d.style.top = tmp.y + "px";
-	// d.style.background.opacity = 0;
-	d.style.overflow = "visible";
-	// d.style.border = "solid #000000"
-	// d.innerText = " " + tmp.username.charAt(0);
-	span.appendChild(userName);
-	d.appendChild(userName);
-	d.style.color = "#ffffff";
-	document.body.appendChild(d);
-}
+const socket = io.connect();
 
 var canvas = document.getElementById("canvas");
-canvas.width = 800;
-canvas.height = 600;
 var ctx = canvas.getContext("2d");
-socket.on("state", function (players) {
-	[...document.getElementsByClassName("playerDIV")].map(
-		(n) => n && n.remove()
-	);
-	ctx.clearRect(0, 0, 800, 600);
-	for (var player1 in players) {
-		var tmp = players[player1];
-		placeDiv(tmp);
-		ctx.beginPath();
-		if (tmp.tag) {
-			ctx.fillStyle = "red";
-		} else {
-			ctx.fillStyle = tmp.color;
-		}
-		ctx.fillRect(
-			tmp.x - tmp.width / 2,
-			tmp.y - tmp.height / 2,
-			tmp.width,
-			tmp.height
-		);
-		ctx.fillStyle = "black";
-		ctx.textAlign = "center";
-		ctx.fillText(
-			tmp.username,
-			tmp.x - tmp.width / 2,
-			tmp.y - tmp.height / 1.5
-		);
-		ctx.closePath();
-	}
+canvas.width = 512;
+canvas.height = 480;
+
+document.body.appendChild(canvas);
+
+var player = {
+    id: '',
+    name: '',
+    is_it: false,
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    velx: 0,
+    vely: 0
+};
+
+var client_player_list = [];
+socket.on('load_players', function(players) {
+    client_player_list = players;
 });
+
+var keysDown = {};
+
+addEventListener('keydown', function(e) {
+    keysDown[e.keyCode] = true;
+}, false);
+
+addEventListener('keyup', function(e) {
+    delete keysDown[e.keyCode];
+}, false);
+
+//take input from keys and send input to server
+var update = function() {
+    if (87 in keysDown)
+        socket.emit('up');
+    if (83 in keysDown) //player holding s
+        socket.emit('down');
+    if (65 in keysDown) //player holding a
+        socket.emit('left');
+    if (68 in keysDown) //player holding d
+        socket.emit('right');
+    if (74 in keysDown)
+        socket.emit('tag');
+};
+
+//render all players, update players when server updates
+var render = function() {
+    //ctx.clearColor = "rgba(0, 0, 0, .3)";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#079641";
+    ctx.textAlign = 'center';
+
+    for (var i = 0; i < client_player_list.length; i++) {
+        if (client_player_list[i].is_it)
+            ctx.fillStyle = "#8F0E0E";
+        else
+            ctx.fillStyle = "#079641";
+
+        ctx.fillRect(client_player_list[i].x, client_player_list[i].y, 25, 25);
+
+        ctx.fillStyle = "#FFF";
+        ctx.font = "15px Arial";
+        ctx.fillText('asdwaw', client_player_list[i].x + 8, client_player_list[i].y - 3);
+    }
+};
+
+socket.on('sv_update', function(players) {
+    client_player_list = players;
+});
+
+socket.on('error', (error) => console.log(error))
+socket.on('connect_failed', function() {
+        console.log("Sorry, there seems to be an issue with the connection!");
+    })
+    //main loop
+var main = function() {
+    setInterval(function() {
+        update();
+        render();
+    }, 1000 / 60);
+};
+
+socket.emit('init_client', {...player, name: 'Xeno' })
+
+main()
