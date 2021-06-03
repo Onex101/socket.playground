@@ -12,7 +12,7 @@ var username = "";
 app.use("/static", express.static(__dirname + "/static"));
 // Routing
 app.get("/", function(request, response) {
-    response.sendFile(path.join(__dirname, "index.html"), data);
+    response.sendFile(path.join(__dirname, "index.html"));
 });
 // app.post("/", function(request, response) {
 //     var body = "";
