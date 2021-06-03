@@ -9,19 +9,29 @@
             border: 5px solid black;
         }
     </style>
+    <link rel="stylesheet" href="/static/css/style.css">
+
     <script src="/socket.io/socket.io.js"></script>
 </head>
 
+
 <body>
-    <canvas id="canvas"></canvas>
     <div id="container">
         <div id="login-container">
             <form id="form">
-                <input id="username" type="text" name="username" required>
+                <input id="username" type="text" name="username" required data-emojiable="true">
                 <input type="submit" value="Login">
             </form>
         </div>
     </div>
+    <div id="canvas-wrapper">
+        <canvas id="canvas">
+        </canvas>
+        <figure id="background">
+            <img src="/static/images/Captursasde.PNG" id="back-image">
+        </figure>
+    </div>
+
 </body>
 <script src="/static/game.js"></script>
 

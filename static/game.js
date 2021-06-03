@@ -5,7 +5,9 @@ var ctx = canvas.getContext("2d");
 canvas.width = 800;
 canvas.height = 600;
 
-document.body.appendChild(canvas);
+const wrapper = document.getElementById("canvas-wrapper");
+
+wrapper.appendChild(canvas);
 
 var player = {
     id: '',
