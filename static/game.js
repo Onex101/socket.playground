@@ -2,8 +2,8 @@ const socket = io.connect();
 
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
-canvas.width = 512;
-canvas.height = 480;
+canvas.width = 800;
+canvas.height = 600;
 
 document.body.appendChild(canvas);
 
@@ -13,6 +13,8 @@ var player = {
     is_it: false,
     x: canvas.width / 2,
     y: canvas.height / 2,
+    width: 25,
+    height: 25,
     velx: 0,
     vely: 0
 };
@@ -25,25 +27,35 @@ socket.on('load_players', function(players) {
 var keysDown = {};
 
 addEventListener('keydown', function(e) {
-    keysDown[e.keyCode] = true;
+    keysDown[e.key] = true;
 }, false);
 
 addEventListener('keyup', function(e) {
-    delete keysDown[e.keyCode];
+    delete keysDown[e.key];
 }, false);
+
+function submitUsername(event) {
+    let username = document.getElementById("username").value;
+    socket.emit('init_client', {...player, name: username })
+    form.style.display = 'none';
+    event.preventDefault();
+}
+
+const form = document.getElementById('form');
+const log = document.getElementById('log');
+form.addEventListener('submit', submitUsername);
+
 
 //take input from keys and send input to server
 var update = function() {
-    if (87 in keysDown)
+    if ('w' in keysDown)
         socket.emit('up');
-    if (83 in keysDown) //player holding s
+    if ('s' in keysDown) //player holding s
         socket.emit('down');
-    if (65 in keysDown) //player holding a
+    if ('a' in keysDown) //player holding a
         socket.emit('left');
-    if (68 in keysDown) //player holding d
+    if ('d' in keysDown) //player holding d
         socket.emit('right');
-    if (74 in keysDown)
-        socket.emit('tag');
 };
 
 //render all players, update players when server updates
@@ -54,16 +66,17 @@ var render = function() {
     ctx.textAlign = 'center';
 
     for (var i = 0; i < client_player_list.length; i++) {
-        if (client_player_list[i].is_it)
-            ctx.fillStyle = "#8F0E0E";
+        const player = client_player_list[i];
+        if (player.is_it)
+            ctx.fillStyle = "red";
         else
-            ctx.fillStyle = "#079641";
+            ctx.fillStyle = "green";
 
-        ctx.fillRect(client_player_list[i].x, client_player_list[i].y, 25, 25);
+        ctx.fillRect(player.x, player.y, 25, 25);
 
-        ctx.fillStyle = "#FFF";
+        ctx.fillStyle = "black";
         ctx.font = "15px Arial";
-        ctx.fillText('asdwaw', client_player_list[i].x + 8, client_player_list[i].y - 3);
+        ctx.fillText(player.name, player.x + 8, player.y - 3);
     }
 };
 
@@ -83,6 +96,5 @@ var main = function() {
     }, 1000 / 60);
 };
 
-socket.emit('init_client', {...player, name: 'Xeno' })
 
 main()

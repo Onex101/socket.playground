@@ -12,19 +12,20 @@ var username = "";
 app.use("/static", express.static(__dirname + "/static"));
 // Routing
 app.get("/", function(request, response) {
-    response.sendFile(path.join(__dirname, "login.html"));
+    response.sendFile(path.join(__dirname, "index.html"), data);
 });
-app.post("/", function(request, response) {
-    var body = "";
-    request.on("data", (chunk) => {
-        body += chunk;
-    });
-    request.on("end", () => {
-        const data = querystring.parse(body);
-        username = data.username;
-    });
-    response.sendFile(path.join(__dirname, "index.html"));
-});
+// app.post("/", function(request, response) {
+//     var body = "";
+//     let data;
+//     request.on("data", (chunk) => {
+//         body += chunk;
+//     });
+//     request.on("end", () => {
+//         const data = querystring.parse(body);
+//         username = data.username;
+//     });
+//     response.sendFile(path.join(__dirname, "index.html"), data);
+// });
 // Starts the server.
 server.listen(process.env.PORT || 5000, function() {
     console.log("Starting server on port 5000");
@@ -32,8 +33,8 @@ server.listen(process.env.PORT || 5000, function() {
 var player_speed = 5;
 var player_size = 20;
 var vel_increment = 0.5;
-var canvas_height = 480;
-var canvas_width = 512;
+var canvas_height = 600;
+var canvas_width = 800;
 
 //Declare list of players connected
 var players = [];
@@ -67,7 +68,47 @@ io.sockets.on('connection', function(socket) {
             this_player.velx = -player_speed;
     };
 
+    const testCollisionRectRect = function(rect1, rect2) {
+        return (
+            rect1.x < rect2.x + rect2.width &&
+            rect2.x < rect1.x + rect1.width &&
+            rect1.y < rect2.y + rect2.height &&
+            rect2.y < rect1.y + rect1.height
+        );
+    };
+
+    const testCollision = function(player2) {
+        //return if colliding (true/false)
+        const entity2 = players[player2]
+        console.log(entity2)
+        const rect1 = {
+            x: this_player.x - this_player.width / 2,
+            y: this_player.y - this_player.height / 2,
+            width: this_player.width,
+            height: this_player.height,
+        };
+        const rect2 = {
+            x: entity2.x - entity2.width / 2,
+            y: entity2.y - entity2.height / 2,
+            width: entity2.width,
+            height: entity2.height,
+        };
+        // console.log({ rect1, rect2 })
+        if (testCollisionRectRect(rect1, rect2) && this_player.is_it) {
+            this_player.is_it = false;
+            players[player2].is_it = true;
+
+        }
+    }
+
     var sv_update = function() {
+        if (player_exists)
+            for (var player2 in players) {
+                if (this_player.id !== players[player2].id) {
+                    console.log('Terstings', players[player2])
+                    testCollision(player2);
+                }
+            }
         io.sockets.emit('sv_update', players);
         if (player_exists) {
             if (players.length == 1)
@@ -91,17 +132,17 @@ io.sockets.on('connection', function(socket) {
         sv_update();
         socket.emit('load_players', players);
 
-        console.log(players);
+        // console.log(players);
     });
 
     //====================CHAT==========================//
     var address = socket.request.connection.remoteAddress;
 
     socket.on('new user', function(data, callback) {
+        console.log(player_exists)
         if (player_exists) {
             this_player.name = data;
             console.log(address + " has connected as '" + data + "'.");
-
             callback();
         }
     });
@@ -120,22 +161,6 @@ io.sockets.on('connection', function(socket) {
     //====================CHAT==========================//
 
     //if player is_it and is within another player, hitting 'j' will make the other player is_it. 
-    socket.on('tag', function() {
-        if (player_exists) {
-            for (var i = 0; i < players.length; i++) {
-                if ((this_player.x + player_size >= players[i].x && this_player.x + player_size <= players[i].x + player_size) ||
-                    (this_player.x <= players[i].x + player_size && this_player.x + player_size >= players[i].x))
-                    if ((this_player.y + player_size >= players[i].y && this_player.y + player_size <= players[i].y + player_size) ||
-                        (this_player.y <= players[i].y + player_size && this_player.y + player_size >= players[i].y)) {
-                        if (this_player.is_it) {
-                            this_player.is_it = false;
-                            players[i].is_it = true;
-                        }
-                    }
-            }
-            sv_update();
-        }
-    });
 
     //Gather key input from users...
     socket.on('up', function() {

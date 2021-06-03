@@ -4,8 +4,8 @@
     <title>A Multiplayer Game</title>
     <style>
         canvas {
-            width: 512px;
-            height: 480px;
+            width: 800px;
+            height: 600px;
             border: 5px solid black;
         }
     </style>
@@ -14,6 +14,14 @@
 
 <body>
     <canvas id="canvas"></canvas>
+    <div id="container">
+        <div id="login-container">
+            <form id="form">
+                <input id="username" type="text" name="username" required>
+                <input type="submit" value="Login">
+            </form>
+        </div>
+    </div>
 </body>
 <script src="/static/game.js"></script>
 
