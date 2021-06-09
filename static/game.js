@@ -60,6 +60,8 @@ var update = function() {
         socket.emit('right');
 };
 
+var frequency = 200;
+
 //render all players, update players when server updates
 var render = function() {
     //ctx.clearColor = "rgba(0, 0, 0, .3)";
@@ -69,8 +71,19 @@ var render = function() {
 
     for (var i = 0; i < client_player_list.length; i++) {
         const player = client_player_list[i];
-        if (player.is_it)
+        if (player.is_it) {
+            if ( Math.floor(Date.now() / frequency) % 2) {
+                ctx.lineWidth = 5;
+                ctx.lineJoin = 'round';
+                ctx.strokeRect(player.x, player.y, 25,25);
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = "red";
+                ctx.strokeStyle = "red";
+            } else {
+                ctx.shadowBlur = 0;
+            }
             ctx.fillStyle = "red";
+        } 
         else
             ctx.fillStyle = "green";
 
