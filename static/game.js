@@ -74,7 +74,7 @@ var render = function() {
         ctx.save();
         const player = client_player_list[i];
         if (player.is_it) {
-            if (player.is_it && Math.floor(Date.now() / frequency) % 2) {
+            if (Math.floor(Date.now() / frequency) % 2) {
                 ctx.lineWidth = 5;
                 ctx.lineJoin = 'round';
                 ctx.strokeRect(player.x, player.y, 25,25);
