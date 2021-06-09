@@ -2,36 +2,30 @@
 
 <head>
     <title>A Multiplayer Game</title>
-    <style>
-        canvas {
-            width: 800px;
-            height: 600px;
-            border: 5px solid black;
-        }
-    </style>
     <link rel="stylesheet" href="/static/css/style.css">
 
     <script src="/socket.io/socket.io.js"></script>
 </head>
 
-
 <body>
-    <div id="container">
-        <div id="login-container">
-            <form id="form">
-                <input id="username" type="text" name="username" required data-emojiable="true">
-                <input type="submit" value="Login">
-            </form>
+    <header>
+        <div class="navmenu">
+            <div id="container">
+                <div id="login-container">
+                    <form id="form">
+                        <input id="username" type="text" name="username" required data-emojiable="true" placeholder="Player Name">
+                        <input id="submit" type="submit" value="Join">
+                    </form>
+                </div>
+            </div>
+         </div> 
+    </header>
+    <div id="content">
+        <div id="canvas-wrapper">
+            <canvas id="canvas">
+            </canvas>
         </div>
     </div>
-    <div id="canvas-wrapper">
-        <canvas id="canvas">
-        </canvas>
-        <figure id="background">
-            <img src="/static/images/Captursasde.PNG" id="back-image">
-        </figure>
-    </div>
-
 </body>
 <script src="/static/game.js"></script>
 
