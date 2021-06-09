@@ -68,17 +68,18 @@ var render = function() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#079641";
     ctx.textAlign = 'center';
+    ctx.strokeStyle = "red";
 
     for (var i = 0; i < client_player_list.length; i++) {
+        ctx.save();
         const player = client_player_list[i];
         if (player.is_it) {
-            if ( Math.floor(Date.now() / frequency) % 2) {
+            if (player.is_it && Math.floor(Date.now() / frequency) % 2) {
                 ctx.lineWidth = 5;
                 ctx.lineJoin = 'round';
                 ctx.strokeRect(player.x, player.y, 25,25);
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = "red";
-                ctx.strokeStyle = "red";
             } else {
                 ctx.shadowBlur = 0;
             }
@@ -92,6 +93,7 @@ var render = function() {
         ctx.fillStyle = "black";
         ctx.font = "15px Arial";
         ctx.fillText(player.name, player.x + 8, player.y - 3);
+        ctx.restore();
     }
 };
 
