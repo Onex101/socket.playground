@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Square Tag Royal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="lobby" class="interactive">
+        <div class="lobby-box">
+            <h1>Tag Royale</h1>
+            
+            <div id="login-form">
+                <div class="label-text">Nickname</div>
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="12">
+                <div class="label-text">Room Name</div>
+                <input type="text" id="room-name" placeholder="e.g. playground" value="global">
+                <button id="join-btn">Join Game</button>
+            </div>
+
+            <div id="waiting-room" class="hidden">
+                <h2>Lobby: <span id="lobby-room-name" class="lobby-room-name"></span></h2>
+                <div class="player-list" id="player-list-display"></div>
+                <p id="player-count" class="player-count">Waiting for players...</p>
+                <button class="btn-green" id="start-btn" disabled>Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="hud-panel"><span id="status-text">WAITING</span></div>
+            <div class="hud-panel hud-timer">
+                <div id="timer-display">00:00</div>
+                <div class="hud-timer-label">ROUND TIMER</div>
+            </div>
+            <div class="hud-panel hud-right"><div id="alive-count">Players: 0</div></div>
+        </div>
+    </div>
+
+    <div id="game-message" class="toast"></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
